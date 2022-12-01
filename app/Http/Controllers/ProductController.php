@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Image;
 use App\Models\Product;
 use App\Models\Subcategory;
 use App\Models\Subsubcategory;
+use http\Env\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -35,7 +37,7 @@ class ProductController extends Controller
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -43,11 +45,12 @@ class ProductController extends Controller
         $request->validate([
             'name'=> 'required',
             'description' => 'required',
-            'category' => 'required',
-            'subcategory' => 'required',
-            'subsubcategory' => 'required',
+            'category' => 'required|exists:categories,id',
+            'subcategory' => 'required|exists:subcategories,id',
+            'subsubcategory' => 'required|exists:subsubcategories,id',
             'image' => 'required|image',
         ]);
+
 
         // create unique image name
         $imageName = time().'.'.$request->image->extension();
@@ -56,29 +59,28 @@ class ProductController extends Controller
         $request->image->move(public_path('images'), $imageName);
 
         // save uploaded product to the products table
-        Product::create(['name' => $request->name,
+        return response()->json(Product::create(['name' => $request->name,
                          'description' => $request->description,
                          'category_id' => $request->category,
                          'subcategory_id' => $request->subcategory,
                          'subsubcategory_id' => $request->subsubcategory,
                          'image' => $imageName]
-        );
+        ));
 
-        return to_route('product');
     }
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function editPath(Request $request)
     {
         // validate request
         $request->validate([
             'id' =>'required|numeric',
-            'category' => 'required',
-            'subcategory' => 'required',
-            'subsubcategory' => 'required',
+            'category' => 'required|exists:categories,id',
+            'subcategory' => 'required|exists:subcategories,id',
+            'subsubcategory' => 'required|exists:subsubcategories,id',
         ]);
 
 
@@ -91,35 +93,38 @@ class ProductController extends Controller
         $product->subsubcategory_id = $request->subsubcategory;
 
         // save the record
-        $product->save();
-
-        return to_route('product');
+        return response()->json($product);
     }
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function delete(Request $request)
+    public function delete($id)
     {
-        //validate request
-        $request->validate([
-            'id'=>'required|numeric',
-        ]);
-
         //get the product by id
-        $product = Product::find($request->id);
+        $product = Product::find($id);
 
-        //delete product
         if ($product) {
-            $product->delete();
+            // delete main image
+            if (file_exists(public_path('/images/' . $product->image))) {
+                unlink(public_path('/images/' . $product->image));
+            }
+
+            // delete related images from gallery
+            $images = Image::where('product_id',$id)->get();
+            foreach ($images as $image){
+                unlink(public_path('/images/' . $image->source));
+            }
+
+            // delete related images from database
+            Image::where('product_id',$id)->delete();
+
+            return response()->json($product->delete());
+        } else {
+            return response()->json('product not found');
         }
 
-        // delete image from public folder
-        if (file_exists(public_path('/images/' . $request->image))) {
-            unlink(public_path('/images/' . $request->image));
-        }
 
-        return to_route('product');
     }
 }

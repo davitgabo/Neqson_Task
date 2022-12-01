@@ -10,26 +10,14 @@ use Illuminate\Http\Request;
 class ImageController extends Controller
 {
     /**
-     * @param $id
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
-     */
-    public function show($id)
-    {
-        return view('admin.images',['title'=>Product::find($id)->name,
-                                         'images'=>Image::where('product_id',$id)->get(),
-                                         'id'=>$id]
-        );
-    }
-
-    /**
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
         // validate request
         $request->validate([
-            'id' => 'required|numeric',
+            'product_id' => 'required|numeric|exists:products,id',
             'image' => 'required|image'
         ]);
 
@@ -40,52 +28,43 @@ class ImageController extends Controller
         $request->image->move(public_path('images'), $imageName);
 
         // save image name to the products table
-        Image::create([
+        return response()->json(Image::create([
                 'source' => $imageName,
-                'product_id' => $request->id
-            ]);
-
-        return to_route('images',['id'=>$request->id]);
+                'product_id' => $request->product_id
+        ]));
     }
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function delete(Request $request)
+    public function delete($id)
     {
-        // validate request
-        $request->validate([
-            'id' => 'required|numeric',
-            'image' => 'required'
-        ]);
-
         //get the image by id
-        $image = Image::find($request->id);
+        $image = Image::find($id);
 
         // delete the image from table
         if ($image) {
-            $image->delete();
+            if (file_exists(public_path('/images/' . $image->image))) {
+                unlink(public_path('/images/' . $image->image));
+            }
+            return response()->json($image->delete());
+        } else {
+            return response()->json('couldn\'t find image');
         }
 
-        // delete the image from public folder
-        if (file_exists(public_path('/images/' . $request->image))) {
-            unlink(public_path('/images/' . $request->image));
-        }
-
-        return redirect()->back();
     }
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function change(Request $request)
     {
         // validate request
         $request->validate([
             'id' => 'required|numeric',
-            'product_id'=>'required',
+            'product_id'=>'required|exists:products,id',
         ]);
 
         // get the product by id
@@ -94,15 +73,18 @@ class ImageController extends Controller
         // get the image by id
         $image = Image::find($request->id);
 
-        // swap the image and product image sources
-        $temp = $product->image;
-        $product->image = $image->source;
-        $image->source = $temp;
+        if ($product && $image) {
+            // swap the image and product image sources
+            $temp = $product->image;
+            $product->image = $image->source;
+            $image->source = $temp;
 
-        // save records to table
-        $product->save();
-        $image->save();
-
-        return redirect()->back();
+            // save records to table
+            $product->save();
+            $image->save();
+            return response()->json('image changed');
+        } else {
+            return response()->json('image change failed');
+        }
     }
 }
