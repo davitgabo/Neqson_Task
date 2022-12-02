@@ -9,30 +9,47 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 
+Route::controller(AuthController::class)->group(function()
+{
+    Route::post('/store', 'register');
+    Route::post('/login','login');
+    Route::post('/logout','logout');
+    Route::post('/refresh','refresh');
+});
 
-Route::post('/store', [AuthController::class, 'register']);
+Route::controller(PageController::class)->group(function()
+{
+    Route::get('/category/{main_category}/{category}/{subcategory}','products');
+    Route::get('/category/{main_category}/{category}','lastLayer');
+    Route::get('/category/{main_category}','show');
+    Route::get('/category','index');
+    Route::get('/product/{id}','gallery');
+});
+Route::middleware('auth:api')->group(function()
+{
+    Route::controller(ProductController::class)->group(function()
+    {
+        Route::get('/admin/products','index');
+        Route::post('/store/product','store');
+        Route::put('/edit/path/{id}','editPath');
+        Route::delete('/delete/product/{id}','delete');
+    });
 
-Route::post('/login', [AuthController::class, 'login']);
+    Route::controller(ImageController::class)->group(function()
+    {
+        Route::post('/store/image','store');
+        Route::put('/change/image/{id}','change');
+        Route::delete('/delete/image/{id}','delete');
+    });
 
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
+    Route::controller(CategoryController::class)->group(function()
+    {
+        Route::get('/admin/{category}','index');
+        Route::post('/store/{category}','store');
+        Route::put('/edit/{category}/{id}','edit');
+        Route::delete('/delete/{category}/{id}','delete');
+    });
+});
 
-Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
 
-Route::get('/admin/products', [ProductController::class, 'index'])->middleware('auth:api');
-Route::get('/admin/{category}', [CategoryController::class, 'index'])->middleware('auth:api');
-
-Route::get('/category/{main_category}/{category}/{subcategory}', [PageController::class, 'products']);
-Route::get('/category/{main_category}/{category}', [PageController::class, 'lastLayer']);
-Route::get('/category/{main_category}', [PageController::class, 'show']);
-Route::get('/category', [PageController::class, 'index']);
-Route::get('/product/{id}', [PageController::class, 'gallery']);
-Route::delete('/delete/product/{id}',[ProductController::class, 'delete'])->middleware('auth:api');
-Route::post('/store/product',[ProductController::class, 'store'])->middleware('auth:api');
-Route::post('/store/image',[ImageController::class, 'store'])->middleware('auth:api');
-Route::put('/change/image',[ImageController::class, 'change'])->middleware('auth:api');
-Route::delete('/delete/image/{id}',[ImageController::class, 'delete'])->middleware('auth:api');
-Route::post('/store/{category}',[CategoryController::class, 'store'])->middleware('auth:api');
-Route::put('/edit/path',[ProductController::class, 'editPath'])->middleware('auth:api');
-Route::put('/edit/{category}',[CategoryController::class, 'edit'])->middleware('auth:api');
-Route::delete('/delete/{category}/{id}',[CategoryController::class, 'delete'])->middleware('auth:api');
 

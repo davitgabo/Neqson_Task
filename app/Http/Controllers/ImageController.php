@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Image;
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ImageController extends Controller
 {
     /**
+     * upload new image to gallery
+     *
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function store(Request $request)
     {
@@ -35,8 +38,10 @@ class ImageController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * delete image from gallery
+     *
+     * @param $id
+     * @return JsonResponse
      */
     public function delete($id)
     {
@@ -56,14 +61,16 @@ class ImageController extends Controller
     }
 
     /**
+     * change main image
+     *
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @param $id
+     * @return JsonResponse
      */
-    public function change(Request $request)
+    public function change(Request $request, $id)
     {
         // validate request
         $request->validate([
-            'id' => 'required|numeric',
             'product_id'=>'required|exists:products,id',
         ]);
 
@@ -71,7 +78,7 @@ class ImageController extends Controller
         $product = Product::find($request->product_id);
 
         // get the image by id
-        $image = Image::find($request->id);
+        $image = Image::find($id);
 
         if ($product && $image) {
             // swap the image and product image sources

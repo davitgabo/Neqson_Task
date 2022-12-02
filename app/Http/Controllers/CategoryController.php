@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Subcategory;
 use App\Models\Subsubcategory;
 use http\Env\Response;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,8 +14,10 @@ class CategoryController extends Controller
 {
 
     /**
+     * list categories in admin panel
+     *
      * @param $page
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function index($page)
     {
@@ -37,16 +40,17 @@ class CategoryController extends Controller
     }
 
     /**
+     * add new category|subcategory
+     *
      * @param Request $request
      * @param $page
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function store(Request $request, $page)
     {
-        $table = substr($page,0,-1).'ies';
         // validate the request
         $request->validate([
-            'name'=> "required|unique:$table",
+            'name'=> "required|unique:categories|unique:subcategories|unique:subsubcategories",
         ]);
 
         // check which category layer is stored and create a record in the relevant table.
@@ -82,20 +86,20 @@ class CategoryController extends Controller
      *
      * @param Request $request
      * @param $page
-     * @return \Illuminate\Http\JsonResponse
+     * @param $id
+     * @return JsonResponse
      */
-    public function edit(Request $request, $page)
+    public function edit(Request $request, $page, $id)
     {
         // get the table name from the requested page
         $db = substr($page,0,-1).'ies';
 
         // validate the request
         $request->validate([
-            "id" => "required|numeric",
-            "name" => "required|unique:$db"
+            "name" => "required|unique:categories|unique:subcategories|unique:subsubcategories"
         ]);
 
-        if (DB::table($db)->where('id', $request->id)->update(['name'=>$request->name])){
+        if (DB::table($db)->where('id', $id)->update(['name'=>$request->name])){
             return response()->json(["$page updated successfully"]);
         } else {
             return response()->json(["$page update failed"]);
@@ -107,9 +111,9 @@ class CategoryController extends Controller
     /**
      * delete the category record
      *
-     * @param Request $request
      * @param $page
-     * @return \Illuminate\Http\JsonResponse
+     * @param $id
+     * @return JsonResponse
      */
     public function delete($page, $id)
     {
